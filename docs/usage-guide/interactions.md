@@ -41,7 +41,7 @@ cl.login("instagrapi", "42")
 # cl.login("instagrapi", "42", verification_code="123456")  # with 2FA verification_code
 # cl.login_by_sessionid("peiWooShooghahdi2Eip7phohph0eeng")
 cl.set_proxy("socks5://127.0.0.1:30235")
-# cl.set_proxy("http://username:password@127.0.0.1:8080")
+# cl.set_proxy("http://YOUR_USERNAME:YOUR_PASSWORD@127.0.0.1:8080")
 # cl.set_proxy("socks5://username:password@127.0.0.1:30235")
 # when addressing the proxy via hostname:
 # cl.set_proxy("socks5h://username:password@exampleproxy.tld:30235")
@@ -55,7 +55,8 @@ print(cl.user_info(cl.user_id))
 | Property            | Description
 | ------------------- | --------------------------------------------------------------
 | request\_logger     | Logger in which various actions from Instagram are registered
-| request\_timeout    | Timeout in seconds between requests (1 second by default)
+| request\_timeout    | Delay in seconds between requests (1 second by default); controls pacing, not HTTP timeouts
+| read\_timeout       | HTTP timeout in seconds for URL downloads and selected public helpers listed below (25 seconds by default)
 | public\_request\_retries\_count | Default retry count for `public_request()`
 | public\_request\_retries\_timeout | Delay between `public_request()` retries
 | session\_retry\_total | Adapter retry count for Requests transports; private curl does not use this setting
@@ -64,6 +65,21 @@ print(cl.user_info(cl.user_id))
 | private\_transport | Private mobile API transport: `curl` by default for HTTP/2 with h2-only ALPN; `requests` for compatibility
 | public\_transport\_impersonate | Browser fingerprint used by the optional curl public transport
 | tls\_verify | TLS certificate verification: `True` by default, `False` for temporary trusted MITM debugging, or a CA bundle path
+
+Set `read_timeout` directly on the client at runtime; it is not a constructor option and is not saved or restored in settings. It applies to:
+
+- The HTTP request for `/share/p/` links in `media_pk_from_url()`.
+- `photo_download_by_url()` and `photo_download_by_url_origin()`.
+- `video_download_by_url()` and `video_download_by_url_origin()`.
+- `story_download_by_url()` and `track_download_by_url()`.
+- `public_head()`.
+
+The legacy `UserMixin.fetch_fb_dtsg()` implementation also uses this setting. `Client.fetch_fb_dtsg()` uses a separate GraphQL implementation and retains its existing timeout behavior, as do other request methods outside the list above.
+
+```python
+client = Client(request_timeout=0)  # Disable the pacing delay.
+client.read_timeout = 30  # Set the HTTP timeout for these helpers to 30 seconds.
+```
 
 
 ### Login
@@ -78,7 +94,7 @@ print(cl.user_info(cl.user_id))
 | inject\_sessionid\_to\_public()      | bool    | Inject sessionid from Private Session to Public Session
 | logout()                             | bool    | Logout
 
-`login()` uses CAA directly and does not automatically fall back to `login_legacy()`. Both entry points accept the same arguments. See the [login migration guide](login-migration.md) for compatibility and saved-session behavior.
+`login()` uses CAA directly. It continues through `login_legacy()` only when Instagram explicitly returns a `CAA_LOGIN_FALLBACK` instruction. Both entry points accept the same arguments. See the [login migration guide](login-migration.md) for compatibility and saved-session behavior.
 
 `login_by_sessionid()` only works when Instagram accepts that `sessionid` for the private mobile API. A browser/web `sessionid` can be rejected with `login_required` or invalidated server-side; for long-lived automation, prefer `login()` once, then `dump_settings()` and reuse the saved settings.
 
@@ -264,7 +280,7 @@ Do not disable TLS verification on untrusted networks or shared proxies because 
 cl = Client()
 
 # Los Angles user:
-cl.set_proxy('http://los:angeles@proxy.address:8080')
+cl.set_proxy('http://YOUR_USERNAME:YOUR_PASSWORD@proxy.example.com:8080')
 cl.set_locale('en_US')
 cl.set_timezone_offset(-7 * 60 * 60)  # Los Angeles UTC (GMT) -7 hours == -25200 seconds
 cl.get_settings()

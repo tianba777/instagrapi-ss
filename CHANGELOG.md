@@ -2,6 +2,15 @@
 
 Earlier release notes are available in [GitHub Releases](https://github.com/subzeroid/instagrapi/releases).
 
+## Unreleased
+
+- Preserve CAA fallback errors, including throttling and rate limits, instead of masking them with the earlier legacy `needs_upgrade` or `BadPassword`. Keep the original legacy error when the CAA endpoint is unavailable or returns no session.
+
+## 3.0.9 — 2026-09-20
+
+- Separate HTTP timeouts from the `request_timeout` pacing delay in download, share-link, public HEAD, and legacy DTSG helpers. Their `read_timeout` defaults to 25 seconds and can be changed independently of request pacing (#2817, thanks to @marnelle1 for the report).
+- Clarify the existing CAA-to-legacy transition in the login guides: it follows an explicit fallback instruction from Instagram.
+
 ## 3.0.8 — 2026-09-20
 
 - Keep user, media, story, follower, and following caches separate for each `Client`, so one client cannot reuse or clear another client's cached data (#2813).

@@ -19,11 +19,11 @@ cl = Client()
 cl.login(USERNAME, PASSWORD)
 ```
 
-`login()` uses CAA directly. It does not try `accounts/login/` first and does not automatically fall back to that endpoint after a CAA failure. All private mobile API requests use curl with HTTP/2 by default. Public web and GraphQL transports retain their separate configuration.
+`login()` uses CAA directly. Since instagrapi 3.0.3, an explicit `CAA_LOGIN_FALLBACK` instruction from Instagram continues through `login_legacy()`, allowing the accounts endpoint to complete login or surface its typed error. Other CAA failures retain their normal error handling. All private mobile API requests use curl with HTTP/2 by default. Public web and GraphQL transports retain their separate configuration.
 
 ## Keep the previous login flow
 
-The previous method is now named `login_legacy()`. Its arguments and existing fallback behavior are preserved:
+The previous method is now named `login_legacy()`. It keeps the same arguments and can fall back to CAA:
 
 ```python
 cl = Client()
@@ -37,7 +37,9 @@ cl = Client(private_transport="requests")
 cl.login_legacy(USERNAME, PASSWORD)
 ```
 
-An explicit legacy login may still invoke its existing CAA fallback. There is no automatic fallback in the opposite direction. `relogin()` uses the new default CAA flow; use `login_legacy(relogin=True)` to explicitly repeat the previous flow.
+An explicit legacy login may invoke its CAA fallback, including when the accounts endpoint returns `needs_upgrade`. The default CAA flow enters legacy login only when Instagram explicitly requests it. `relogin()` uses the new default CAA flow; use `login_legacy(relogin=True)` to explicitly repeat the previous flow.
+
+If that CAA fallback raises a throttling, rate-limit, feedback, or other login error, its exception propagates instead of being replaced by the earlier legacy `needs_upgrade` or `BadPassword`. The original legacy error is retained when CAA returns no session or its endpoint is unavailable (HTTP 404, or a `field_exception` reporting a null payload). An outdated-app error alone therefore does not identify the cause of every failed login; inspect the actual failure before retrying.
 
 ## Reuse saved sessions
 
@@ -81,7 +83,7 @@ cl.dump_settings("session.json")
 
 ## Verification and failures
 
-Continue to pass `verification_code` for supported two-factor challenges. The CAA profile-code flow also supports `challenge_code_handler`; see [TOTP](totp.md). Native CAA exceptions propagate. A response without a session or a supported verification context raises `ClientError` with the CAA failure reason. Curl does not automatically retry a failed password POST.
+Continue to pass `verification_code` for supported two-factor challenges. The CAA profile-code flow also supports `challenge_code_handler`; see [TOTP](totp.md). Native CAA exceptions propagate. If CAA returns neither a usable session, a supported verification context, nor an explicit fallback instruction, `login()` raises `ClientError` with the CAA failure reason. Curl does not automatically retry a failed password POST.
 
 ## Installation requirements
 
