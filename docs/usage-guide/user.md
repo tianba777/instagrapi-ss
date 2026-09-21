@@ -48,7 +48,7 @@ View a list of a user's medias, following and followers
 | chaining(user_id: str)                        | dict                  | Suggested users for a profile (`discover/chaining/`) — same surface as the app's "Suggested for you" carousel |
 | fetch_suggestion_details(user_id: str, chained_ids: str) | dict       | Expanded social-context fields for chained suggestion ids (`discover/fetch_suggestion_details/`) |
 | discover_recommended_accounts_for_category_v1(user_id: str) | dict | Business-category-similar accounts: extracts `category_id` from the target's stream payload, then calls `discover/recommended_accounts_for_category/` |
-| user_related_profiles_gql(user_id: str)       | List[UserShort]       | Related profiles via public GraphQL `edge_chaining` (legacy `query_hash`, gated by IG — prefer `chaining` for reliability) |
+| user_related_profiles_gql(user_id: str)       | List[UserShort]       | Related profiles via public GraphQL `edge_chaining`, using the saved session when available (legacy `query_hash`, gated by IG — prefer `chaining` for reliability) |
 
 ### Option types
 
@@ -69,8 +69,8 @@ Lookup helpers:
 
 | Method                                        | Return                | Description                                                  |
 |-----------------------------------------------|-----------------------|--------------------------------------------------------------|
-| user_short_gql(user_id: str, use_cache: bool = True) | UserShort      | Short user info with current GraphQL/web-profile fallback chain |
-| username_from_user_id_gql(user_id: str)       | str                   | Resolve username from user id using the same fallback chain  |
+| user_short_gql(user_id: str, use_cache: bool = True) | UserShort      | Short user info through the current web profile GraphQL query |
+| username_from_user_id_gql(user_id: str)       | str                   | Resolve username through the current web profile GraphQL query  |
 
 Streamed profile fetch (raw payloads, app-side surface):
 
@@ -108,6 +108,8 @@ Low level methods:
 | private_graphql_following_list(user_id: str, rank_token: str, ..., order: Optional[FOLLOWERS_ORDER] = None) | dict | Raw private mobile GraphQL following list. Supports mobile `order` when accepted by Instagram |
 | private_graphql_clips_profile(target_user_id: str, ...)                             | dict                        | Raw private mobile GraphQL profile Reels stream                            |
 | private_graphql_inbox_tray_for_user(user_id: str, ...)                              | dict                        | Raw private mobile GraphQL inbox tray query                                |
+
+`user_short_gql()` and `user_info_v2_gql()` use the same current web profile GraphQL query and return `UserShort` and `User`, respectively. `user_info_by_username_v2_gql()` resolves the username before fetching that profile. These methods copy an available mobile session into the public request session.
 
 The batch follow request helpers call the single-user approve/decline endpoints for
 each `user_id`; they do not implement an auto-approval policy.
