@@ -83,6 +83,10 @@ class MediaMixin:
             media["id"] = f"{media_id}_{user['pk']}"
         if "taken_at" not in media and "1ltaken_at" in media:
             media["taken_at"] = media["1ltaken_at"]
+        if media.get("carousel_media"):
+            media["carousel_media"] = [
+                MediaMixin._normalize_xdt_profile_media(item) for item in media["carousel_media"]
+            ]
         return media
 
     @staticmethod
@@ -991,7 +995,7 @@ class MediaMixin:
         self, user_id: str, amount: int = 0, sleep: int = 2, end_cursor=None
     ) -> Tuple[List[Media], str]:
         """
-        Get a page of a user's media by Public Graphql API
+        Get a page of a user's media via private app GraphQL, with public GraphQL fallback on ClientError
 
         Parameters
         ----------
@@ -1023,7 +1027,7 @@ class MediaMixin:
 
     def user_medias_gql(self, user_id: str, amount: int = 0, sleep: int = 0) -> List[Media]:
         """
-        Get a user's media by Public Graphql API
+        Get a user's media via private app GraphQL, with public GraphQL fallback on ClientError
 
         Parameters
         ----------
